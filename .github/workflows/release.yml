@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag to publish (for example v1.7.13)
+        required: true
+        type: string
 
 jobs:
   build-and-release:
@@ -28,26 +34,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build all-in-one HTML
-        run: npm run build
+      - name: Validate and prepare release assets
+        run: npm run release:check
         env:
-          VERSION: ${{ github.ref_name }}
-
-      - name: Prepare release assets
-        run: |
-          cd dist
-          mv index.html management.html
-          ls -lh management.html
+          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
 
       - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
         run: |
           set -euo pipefail
-          current_tag="${GITHUB_REF_NAME}"
+          current_tag="${RELEASE_TAG}"
+          current_ref="${GITHUB_SHA}"
+          if git rev-parse -q --verify "refs/tags/${current_tag}" >/dev/null; then
+            current_ref="${current_tag}"
+          fi
           previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || true)"
           if [ -n "${previous_tag}" ]; then
-            range="${previous_tag}..${current_tag}"
+            range="${previous_tag}..${current_ref}"
           else
-            range="${current_tag}"
+            range="${current_ref}"
           fi
 
           : > release-notes.md
@@ -56,7 +62,11 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/management.html
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            dist/management.html
+            dist/management.html.sha256
           body_path: release-notes.md
           draft: false
           prerelease: false

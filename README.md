@@ -38,11 +38,11 @@ Open `http://localhost:5173`, then connect to your CLI Proxy API backend instanc
 
 ```bash
 npm install
-npm run build
+npm run build:release
 ```
 
 - Output: `dist/index.html` (all assets are inlined).
-- For CLI Proxy API bundling, the release workflow renames it to `management.html`.
+- Release-ready assets: `dist/management.html` and `dist/management.html.sha256`.
 - To preview locally: `npm run preview`
 
 Tip: opening `dist/index.html` via `file://` may be blocked by browser CORS; serving it (preview/static server) is more reliable.
@@ -119,8 +119,28 @@ The UI language is automatically detected from browser settings and can be manua
 ## Build & release notes
 
 - Vite produces a **single HTML** output (`dist/index.html`) with all assets inlined (via `vite-plugin-singlefile`).
-- Tagging `vX.Y.Z` triggers `.github/workflows/release.yml` to publish `dist/management.html`.
+- `npm run build:release` copies `dist/index.html` to `dist/management.html` and emits `dist/management.html.sha256`.
+- `npm run release:check` runs `type-check`, `lint`, and `build:release` in one shot.
+- Tagging `vX.Y.Z` triggers `.github/workflows/release.yml` to publish `dist/management.html` and `dist/management.html.sha256`.
+- The same workflow also supports manual `workflow_dispatch` when you want GitHub Actions to create a release for a specific `vX.Y.Z` tag name from the current commit.
 - The UI version shown in the footer is injected at build time (env `VERSION`, git tag, or `package.json` fallback).
+
+## Self-maintained release flow
+
+If you maintain your own `Cli-Proxy-API-Management-Center` repository and want `CLIProxyAPI` to consume **your** releases instead of the upstream panel feed:
+
+1. Keep your server config pointing `remote-management.panel-github-repository` at your own GitHub repo URL.
+2. Merge validated UI changes into the branch you use for releases.
+3. Run `npm run release:check` locally before publishing.
+4. Push a tag such as `v1.7.13` (or run the release workflow manually with that tag name).
+5. Confirm the latest GitHub release contains `management.html`; `CLIProxyAPI`'s management-asset updater can then use that release as its update source.
+
+Example:
+
+```bash
+git tag v1.7.13
+git push origin v1.7.13
+```
 
 ## Security notes
 

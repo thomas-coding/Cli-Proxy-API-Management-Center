@@ -38,11 +38,11 @@ npm run dev
 
 ```bash
 npm install
-npm run build
+npm run build:release
 ```
 
 - 构建产物：`dist/index.html`（资源已全部内联）。
-- 在 CLI Proxy API 的发布流程里会重命名为 `management.html`。
+- 可直接用于发布的产物：`dist/management.html` 和 `dist/management.html.sha256`。
 - 本地预览：`npm run preview`
 
 提示：直接用 `file://` 打开 `dist/index.html` 可能遇到浏览器 CORS 限制；更稳妥的方式是用预览/静态服务器打开。
@@ -118,8 +118,28 @@ npm run build
 ## 构建与发布说明
 
 - 使用 Vite 输出 **单文件 HTML**（`dist/index.html`），资源全部内联（`vite-plugin-singlefile`）。
-- 打 `vX.Y.Z` 标签会触发 `.github/workflows/release.yml`，发布 `dist/management.html`。
+- `npm run build:release` 会把 `dist/index.html` 复制成 `dist/management.html`，并生成 `dist/management.html.sha256`。
+- `npm run release:check` 会顺序执行 `type-check`、`lint` 和 `build:release`。
+- 打 `vX.Y.Z` 标签会触发 `.github/workflows/release.yml`，发布 `dist/management.html` 和 `dist/management.html.sha256`。
+- 同一个工作流也支持手动 `workflow_dispatch`，可以在当前提交上指定一个 `vX.Y.Z` 标签名来创建 release。
 - 页脚显示的 UI 版本在构建期注入（优先使用环境变量 `VERSION`，否则使用 git tag / `package.json`）。
+
+## 自维护发布流程
+
+如果你希望 `CLIProxyAPI` 使用**你自己的**管理面板发布源，而不是上游仓库的 release：
+
+1. 先把服务端 `remote-management.panel-github-repository` 指向你自己的 GitHub 仓库 URL。
+2. 将验证通过的 UI 改动合并到你用于发布的分支。
+3. 发布前先在本地执行 `npm run release:check`。
+4. 推送类似 `v1.7.13` 这样的标签（或者在 GitHub Actions 里手动触发 release 工作流并填入该标签名）。
+5. 确认最新 GitHub Release 已包含 `management.html`；随后 `CLIProxyAPI` 的管理面板自动更新器就可以从你的 release 中拉取资产。
+
+示例：
+
+```bash
+git tag v1.7.13
+git push origin v1.7.13
+```
 
 ## 安全提示
 
