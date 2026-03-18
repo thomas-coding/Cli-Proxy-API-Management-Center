@@ -621,6 +621,22 @@
   flex-shrink: 0;
 }
 
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
+  flex-shrink: 0;
+}
+
 .fileName {
   font-size: 14px;
   font-weight: 600;
@@ -671,6 +687,95 @@
 
 .sortSelect {
   min-width: 140px;
+}
+
+.categorySections {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.categorySection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.categorySectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border: 1px solid var(--border-color);
+  border-radius: $radius-lg;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--primary-color) 10%, transparent), transparent 42%),
+    var(--bg-primary);
+
+  @include mobile {
+    flex-direction: column;
+  }
+}
+
+.categorySectionTitleRow {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  min-width: 0;
+}
+
+.categorySectionTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.categorySectionBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+}
+
+.categorySectionCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.categorySectionMeta {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.categoryPriorityEditor {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-sm;
+  min-width: min(340px, 100%);
+
+  :global(.form-group) {
+    margin: 0;
+    flex: 1;
+  }
+
+  @include mobile {
+    width: 100%;
+  }
 }
 
 .healthStatusMessage {

@@ -27,10 +27,13 @@ import {
   MIN_CARD_PAGE_SIZE,
   QUOTA_PROVIDER_TYPES,
   clampCardPageSize,
+  getAuthCategoryLabel,
+  getAuthCategoryOrder,
   getTypeColor,
   getTypeLabel,
   hasAuthFileStatusMessage,
   isRuntimeOnlyAuthFile,
+  normalizeAuthCategory,
   normalizeProviderKey,
   parsePriorityValue,
   type QuotaProviderType,
@@ -64,7 +67,7 @@ import {
   type AuthFilesSortMode,
 } from '@/features/authFiles/uiState';
 import { useAuthStore, useNotificationStore, useThemeStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
+import type { AuthCategory, AuthFileItem } from '@/types';
 import styles from './AuthFilesPage.module.scss';
 
 const easePower3Out = (progress: number) => 1 - (1 - progress) ** 4;
@@ -104,6 +107,7 @@ export function AuthFilesPage() {
   const navigate = useNavigate();
 
   const [filter, setFilter] = useState<'all' | string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | AuthCategory>('all');
   const [problemOnly, setProblemOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -114,6 +118,7 @@ export function AuthFilesPage() {
   const [viewMode, setViewMode] = useState<'diagram' | 'list'>('list');
   const [sortMode, setSortMode] = useState<AuthFilesSortMode>('default');
   const [batchActionBarVisible, setBatchActionBarVisible] = useState(false);
+  const [categoryPriorityInputs, setCategoryPriorityInputs] = useState<Record<string, string>>({});
   const floatingBatchActionsRef = useRef<HTMLDivElement>(null);
   const batchActionAnimationRef = useRef<AnimationPlaybackControlsWithThen | null>(null);
   const previousSelectionCountRef = useRef(0);
@@ -122,6 +127,7 @@ export function AuthFilesPage() {
   const { keyStats, usageDetails, loadKeyStats, refreshKeyStats } = useAuthFilesStats();
   const {
     files,
+    categoryPriorities,
     selectedFiles,
     selectionCount,
     loading,
@@ -130,6 +136,7 @@ export function AuthFilesPage() {
     deleting,
     deletingAll,
     statusUpdating,
+    categoryPriorityUpdating,
     fileInputRef,
     loadFiles,
     handleUploadClick,
@@ -138,6 +145,7 @@ export function AuthFilesPage() {
     handleDeleteAll,
     handleDownload,
     handleStatusToggle,
+    updateCategoryPriority,
     toggleSelect,
     selectAllVisible,
     deselectAll,
@@ -320,6 +328,16 @@ export function AuthFilesPage() {
     [t]
   );
 
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'all', label: t('auth_files.category_filter_all') },
+      { value: 'team', label: t('auth_files.category_team') },
+      { value: 'free', label: t('auth_files.category_free') },
+      { value: 'unknown', label: t('auth_files.category_unknown') },
+    ],
+    [t]
+  );
+
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: filesMatchingProblemFilter.length };
     filesMatchingProblemFilter.forEach((file) => {
@@ -332,20 +350,27 @@ export function AuthFilesPage() {
   const filtered = useMemo(() => {
     return filesMatchingProblemFilter.filter((item) => {
       const matchType = filter === 'all' || item.type === filter;
+      const matchCategory =
+        categoryFilter === 'all' ||
+        normalizeAuthCategory(item.auth_category ?? item['auth_category']) === categoryFilter;
       const term = search.trim().toLowerCase();
       const matchSearch =
         !term ||
         item.name.toLowerCase().includes(term) ||
         (item.type || '').toString().toLowerCase().includes(term) ||
         (item.provider || '').toString().toLowerCase().includes(term);
-      return matchType && matchSearch;
+      return matchType && matchCategory && matchSearch;
     });
-  }, [filesMatchingProblemFilter, filter, search]);
+  }, [categoryFilter, filesMatchingProblemFilter, filter, search]);
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
     if (sortMode === 'default') {
       copy.sort((a, b) => {
+        const categoryCompare =
+          getAuthCategoryOrder(a.auth_category ?? a['auth_category']) -
+          getAuthCategoryOrder(b.auth_category ?? b['auth_category']);
+        if (categoryCompare !== 0) return categoryCompare;
         const providerA = normalizeProviderKey(String(a.provider ?? a.type ?? 'unknown'));
         const providerB = normalizeProviderKey(String(b.provider ?? b.type ?? 'unknown'));
         const providerCompare = providerA.localeCompare(providerB);
@@ -368,6 +393,29 @@ export function AuthFilesPage() {
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
   const pageItems = sorted.slice(start, start + pageSize);
+  const pageItemsByCategory = useMemo(() => {
+    const grouped = new Map<AuthCategory, AuthFileItem[]>();
+    pageItems.forEach((file) => {
+      const category = normalizeAuthCategory(file.auth_category ?? file['auth_category']);
+      const current = grouped.get(category) ?? [];
+      current.push(file);
+      grouped.set(category, current);
+    });
+
+    return Array.from(grouped.entries())
+      .sort((a, b) => getAuthCategoryOrder(a[0]) - getAuthCategoryOrder(b[0]))
+      .map(([category, items]) => {
+        const priority = categoryPriorities[category];
+        const mixed = items.some((file) => file.category_priority_mixed === true);
+        return {
+          category,
+          items,
+          priority,
+          mixed,
+          anchorName: items[0]?.name ?? '',
+        };
+      });
+  }, [categoryPriorities, pageItems]);
   const selectablePageItems = useMemo(
     () => pageItems.filter((file) => !isRuntimeOnlyAuthFile(file)),
     [pageItems]
@@ -390,6 +438,29 @@ export function AuthFilesPage() {
       );
     },
     [showNotification, t]
+  );
+
+  const handleCategoryPriorityInputChange = useCallback((category: AuthCategory, value: string) => {
+    setCategoryPriorityInputs((prev) => ({ ...prev, [category]: value }));
+  }, []);
+
+  const handleCategoryPrioritySave = useCallback(
+    async (category: AuthCategory, anchorName: string) => {
+      if (!anchorName) return;
+      const rawValue = (categoryPriorityInputs[category] ?? '').trim();
+      const nextPriority = rawValue === '' ? 0 : parsePriorityValue(rawValue);
+      if (nextPriority === undefined) {
+        showNotification(t('auth_files.category_priority_invalid'), 'error');
+        return;
+      }
+
+      await updateCategoryPriority({ anchorName, category, priority: nextPriority });
+      setCategoryPriorityInputs((prev) => ({
+        ...prev,
+        [category]: nextPriority === 0 ? '' : String(nextPriority),
+      }));
+    },
+    [categoryPriorityInputs, showNotification, t, updateCategoryPriority]
   );
 
   const openExcludedEditor = useCallback(
@@ -657,6 +728,22 @@ export function AuthFilesPage() {
                 fullWidth={false}
               />
             </div>
+            <div className={styles.filterItem}>
+              <label>{t('auth_files.category_filter_label')}</label>
+              <Select
+                className={styles.sortSelect}
+                value={categoryFilter}
+                options={categoryOptions}
+                onChange={(value) => {
+                  if (value !== categoryFilter) {
+                    setCategoryFilter(value === 'all' ? 'all' : normalizeAuthCategory(value));
+                    setPage(1);
+                  }
+                }}
+                ariaLabel={t('auth_files.category_filter_label')}
+                fullWidth={false}
+              />
+            </div>
             <div className={`${styles.filterItem} ${styles.filterToggleItem}`}>
               <label>{t('auth_files.problem_filter_label')}</label>
               <div className={styles.filterToggle}>
@@ -686,30 +773,75 @@ export function AuthFilesPage() {
             description={t('auth_files.search_empty_desc')}
           />
         ) : (
-          <div
-            className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''}`}
-          >
-            {pageItems.map((file) => (
-              <AuthFileCard
-                key={file.name}
-                file={file}
-                selected={selectedFiles.has(file.name)}
-                resolvedTheme={resolvedTheme}
-                disableControls={disableControls}
-                deleting={deleting}
-                statusUpdating={statusUpdating}
-                quotaFilterType={quotaFilterType}
-                keyStats={keyStats}
-                statusBarCache={statusBarCache}
-                onShowModels={showModels}
-                onShowDetails={showDetails}
-                onDownload={handleDownload}
-                onOpenPrefixProxyEditor={openPrefixProxyEditor}
-                onDelete={handleDelete}
-                onToggleStatus={handleStatusToggle}
-                onToggleSelect={toggleSelect}
-              />
-            ))}
+          <div className={styles.categorySections}>
+            {pageItemsByCategory.map(({ category, items, priority, mixed, anchorName }) => {
+              const priorityInput =
+                categoryPriorityInputs[category] ?? (priority === undefined || priority === 0 ? '' : String(priority));
+
+              return (
+                <section key={category} className={styles.categorySection}>
+                  <div className={styles.categorySectionHeader}>
+                    <div className={styles.categorySectionTitleRow}>
+                      <div className={styles.categorySectionTitleBlock}>
+                        <span className={styles.categorySectionBadge}>
+                          {getAuthCategoryLabel(t, category)}
+                        </span>
+                        <span className={styles.categorySectionCount}>{items.length}</span>
+                      </div>
+                      <span className={styles.categorySectionMeta}>
+                        {t('auth_files.category_priority_current')}:{' '}
+                        {mixed ? t('auth_files.category_priority_mixed') : priority ?? t('common.not_set')}
+                      </span>
+                    </div>
+
+                    <div className={styles.categoryPriorityEditor}>
+                      <Input
+                        label={t('auth_files.category_priority_label')}
+                        value={priorityInput}
+                        placeholder={t('auth_files.category_priority_placeholder')}
+                        hint={t('auth_files.category_priority_hint')}
+                        disabled={disableControls || categoryPriorityUpdating[category] === true}
+                        onChange={(e) => handleCategoryPriorityInputChange(category, e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => void handleCategoryPrioritySave(category, anchorName)}
+                        loading={categoryPriorityUpdating[category] === true}
+                        disabled={disableControls || categoryPriorityUpdating[category] === true || !anchorName}
+                      >
+                        {t('common.save')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`${styles.fileGrid} ${quotaFilterType ? styles.fileGridQuotaManaged : ''}`}
+                  >
+                    {items.map((file) => (
+                      <AuthFileCard
+                        key={file.name}
+                        file={file}
+                        selected={selectedFiles.has(file.name)}
+                        resolvedTheme={resolvedTheme}
+                        disableControls={disableControls}
+                        deleting={deleting}
+                        statusUpdating={statusUpdating}
+                        quotaFilterType={quotaFilterType}
+                        keyStats={keyStats}
+                        statusBarCache={statusBarCache}
+                        onShowModels={showModels}
+                        onShowDetails={showDetails}
+                        onDownload={handleDownload}
+                        onOpenPrefixProxyEditor={openPrefixProxyEditor}
+                        onDelete={handleDelete}
+                        onToggleStatus={handleStatusToggle}
+                        onToggleSelect={toggleSelect}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
 

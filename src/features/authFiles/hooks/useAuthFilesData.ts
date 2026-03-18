@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { authFilesApi } from '@/services/api';
 import { apiClient } from '@/services/api/client';
 import { useNotificationStore } from '@/stores';
-import type { AuthFileItem } from '@/types';
+import type { AuthCategory, AuthFileItem } from '@/types';
 import { formatFileSize } from '@/utils/format';
 import { MAX_AUTH_FILE_SIZE } from '@/utils/constants';
 import { downloadBlob } from '@/utils/download';
@@ -22,6 +22,7 @@ type DeleteAllOptions = {
 
 export type UseAuthFilesDataResult = {
   files: AuthFileItem[];
+  categoryPriorities: Partial<Record<AuthCategory, number>>;
   selectedFiles: Set<string>;
   selectionCount: number;
   loading: boolean;
@@ -30,6 +31,7 @@ export type UseAuthFilesDataResult = {
   deleting: string | null;
   deletingAll: boolean;
   statusUpdating: Record<string, boolean>;
+  categoryPriorityUpdating: Record<string, boolean>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   loadFiles: () => Promise<void>;
   handleUploadClick: () => void;
@@ -38,6 +40,11 @@ export type UseAuthFilesDataResult = {
   handleDeleteAll: (options: DeleteAllOptions) => void;
   handleDownload: (name: string) => Promise<void>;
   handleStatusToggle: (item: AuthFileItem, enabled: boolean) => Promise<void>;
+  updateCategoryPriority: (options: {
+    anchorName: string;
+    category: AuthCategory;
+    priority: number;
+  }) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
   deselectAll: () => void;
@@ -55,12 +62,14 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
   const { showNotification, showConfirmation } = useNotificationStore();
 
   const [files, setFiles] = useState<AuthFileItem[]>([]);
+  const [categoryPriorities, setCategoryPriorities] = useState<Partial<Record<AuthCategory, number>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [categoryPriorityUpdating, setCategoryPriorityUpdating] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -111,6 +120,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     try {
       const data = await authFilesApi.list();
       setFiles(data?.files || []);
+      setCategoryPriorities(data?.category_priorities || data?.categoryPriorities || {});
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : t('notification.refresh_failed');
       setError(errorMessage);
@@ -410,6 +420,39 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     [showNotification, t]
   );
 
+  const updateCategoryPriority = useCallback(
+    async ({ anchorName, category, priority }: { anchorName: string; category: AuthCategory; priority: number }) => {
+      setCategoryPriorityUpdating((prev) => ({ ...prev, [category]: true }));
+      try {
+        const result = await authFilesApi.patchFields({
+          name: anchorName,
+          category_priority: priority,
+        });
+        await loadFiles();
+        showNotification(
+          t('auth_files.category_priority_saved_success', {
+            category: t(`auth_files.category_${category}`),
+            count: result.updated_count ?? 0,
+            priority,
+          }),
+          'success'
+        );
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : t('notification.update_failed');
+        showNotification(`${t('notification.update_failed')}: ${errorMessage}`, 'error');
+        throw err;
+      } finally {
+        setCategoryPriorityUpdating((prev) => {
+          if (!prev[category]) return prev;
+          const next = { ...prev };
+          delete next[category];
+          return next;
+        });
+      }
+    },
+    [loadFiles, showNotification, t]
+  );
+
   const batchSetStatus = useCallback(
     async (names: string[], enabled: boolean) => {
       const uniqueNames = Array.from(new Set(names));
@@ -535,6 +578,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
 
   return {
     files,
+    categoryPriorities,
     selectedFiles,
     selectionCount,
     loading,
@@ -543,6 +587,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     deleting,
     deletingAll,
     statusUpdating,
+    categoryPriorityUpdating,
     fileInputRef,
     loadFiles,
     handleUploadClick,
@@ -551,6 +596,7 @@ export function useAuthFilesData(options: UseAuthFilesDataOptions): UseAuthFiles
     handleDeleteAll,
     handleDownload,
     handleStatusToggle,
+    updateCategoryPriority,
     toggleSelect,
     selectAllVisible,
     deselectAll,

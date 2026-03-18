@@ -3,11 +3,25 @@
  */
 
 import { apiClient } from './client';
-import type { AuthFilesResponse } from '@/types/authFile';
+import type { AuthCategory, AuthFilesResponse } from '@/types/authFile';
 import type { OAuthModelAliasEntry } from '@/types';
 
 type StatusError = { status?: number };
 type AuthFileStatusResponse = { status: string; disabled: boolean };
+type PatchAuthFileFieldsResponse = {
+  status: string;
+  category?: AuthCategory | string;
+  updated_count?: number;
+};
+
+export type PatchAuthFileFieldsPayload = {
+  name: string;
+  prefix?: string;
+  proxy_url?: string;
+  priority?: number;
+  auth_category?: AuthCategory | string;
+  category_priority?: number;
+};
 
 export const AUTH_FILE_INVALID_JSON_OBJECT_ERROR = 'AUTH_FILE_INVALID_JSON_OBJECT';
 
@@ -134,6 +148,9 @@ export const authFilesApi = {
 
   setStatus: (name: string, disabled: boolean) =>
     apiClient.patch<AuthFileStatusResponse>('/auth-files/status', { name, disabled }),
+
+  patchFields: (payload: PatchAuthFileFieldsPayload) =>
+    apiClient.patch<PatchAuthFileFieldsResponse>('/auth-files/fields', payload),
 
   upload: (file: File) => {
     const formData = new FormData();

@@ -16,6 +16,7 @@ import { resolveAuthProvider } from '@/utils/quota';
 import { calculateStatusBarData, normalizeAuthIndex, type KeyStats } from '@/utils/usage';
 import { formatFileSize } from '@/utils/format';
 import {
+  getAuthCategoryLabel,
   QUOTA_PROVIDER_TYPES,
   formatModified,
   getAuthFileStatusMessage,
@@ -112,6 +113,10 @@ export function AuthFileCard(props: AuthFileCardProps) {
     Boolean(rawStatusMessage) && !HEALTHY_STATUS_MESSAGES.has(rawStatusMessage.toLowerCase());
 
   const priorityValue = parsePriorityValue(file.priority ?? file['priority']);
+  const authCategoryLabel = getAuthCategoryLabel(
+    t,
+    file.auth_category ?? file['auth_category']
+  );
   const noteValue = typeof file.note === 'string' ? file.note.trim() : '';
 
   return (
@@ -141,6 +146,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
             >
               {getTypeLabel(t, file.type || 'unknown')}
             </span>
+            <span className={styles.categoryBadge}>{authCategoryLabel}</span>
             <span className={styles.fileName}>{file.name}</span>
           </div>
 

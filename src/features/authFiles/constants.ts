@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { AuthFileItem } from '@/types';
+import type { AuthCategory, AuthFileItem } from '@/types';
 import {
   normalizeAuthIndex,
   normalizeUsageSourceId,
@@ -92,6 +92,30 @@ export const resolveQuotaErrorMessage = (
 };
 
 export const normalizeProviderKey = (value: string) => value.trim().toLowerCase();
+
+export const normalizeAuthCategory = (value: unknown): AuthCategory => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  if (normalized === 'team') return 'team';
+  if (normalized === 'free') return 'free';
+  return 'unknown';
+};
+
+export const getAuthCategoryLabel = (t: TFunction, category: unknown): string => {
+  const normalized = normalizeAuthCategory(category);
+  const key = `auth_files.category_${normalized}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return normalized;
+};
+
+export const getAuthCategoryOrder = (category: unknown): number => {
+  const normalized = normalizeAuthCategory(category);
+  if (normalized === 'team') return 0;
+  if (normalized === 'free') return 1;
+  return 2;
+};
 
 export const getAuthFileStatusMessage = (file: AuthFileItem): string => {
   const raw = file['status_message'] ?? file.statusMessage;
