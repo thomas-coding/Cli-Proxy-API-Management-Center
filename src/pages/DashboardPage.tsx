@@ -34,6 +34,7 @@ export function DashboardPage() {
   const serverBuildDate = useAuthStore((state) => state.serverBuildDate);
   const apiBase = useAuthStore((state) => state.apiBase);
   const config = useConfigStore((state) => state.config);
+  const fetchConfig = useConfigStore((state) => state.fetchConfig);
 
   const models = useModelsStore((state) => state.models);
   const modelsLoading = useModelsStore((state) => state.loading);
@@ -116,13 +117,14 @@ export function DashboardPage() {
     }
 
     try {
+      const runtimeConfig = config ?? (await fetchConfig().catch(() => null));
       const apiKeys = await resolveApiKeysForModels();
       const primaryKey = apiKeys[0];
-      await fetchModelsFromStore(apiBase, primaryKey);
+      await fetchModelsFromStore(apiBase, primaryKey, false, runtimeConfig);
     } catch {
       // Ignore model fetch errors on dashboard
     }
-  }, [connectionStatus, apiBase, resolveApiKeysForModels, fetchModelsFromStore]);
+  }, [apiBase, config, connectionStatus, fetchConfig, fetchModelsFromStore, resolveApiKeysForModels]);
 
   useEffect(() => {
     const fetchStats = async () => {

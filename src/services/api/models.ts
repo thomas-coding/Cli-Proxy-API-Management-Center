@@ -16,6 +16,40 @@ const GEMINI_MODELS_IN_FLIGHT = new Map<string, Promise<ReturnType<typeof normal
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const getConfigRecord = (runtimeConfig: unknown): Record<string, unknown> | null => {
+  if (!isRecord(runtimeConfig)) return null;
+  const raw = runtimeConfig.raw;
+  if (isRecord(raw)) return raw;
+  return runtimeConfig;
+};
+
+const parsePortValue = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const resolveManagedModelsRequestBase = (baseUrl: string, runtimeConfig?: unknown): string => {
+  const configRecord = getConfigRecord(runtimeConfig);
+  const port = parsePortValue(configRecord?.port);
+  if (!port) {
+    return normalizeApiBase(baseUrl);
+  }
+
+  return `http://127.0.0.1:${port}`;
+};
+
 const buildRequestSignature = (url: string, headers: Record<string, string>) => {
   const headerSignature = Object.entries(headers)
     .sort(([a], [b]) => a.toLowerCase().localeCompare(b.toLowerCase()))
@@ -101,6 +135,19 @@ export const modelsApi = {
     return normalizeModelList(payload, { dedupe: true });
   },
 
+  async fetchManagedModels(
+    baseUrl: string,
+    apiKey?: string,
+    runtimeConfig?: unknown,
+    headers: Record<string, string> = {}
+  ) {
+    const requestBase = resolveManagedModelsRequestBase(baseUrl, runtimeConfig);
+    if (requestBase) {
+      return this.fetchV1ModelsViaApiCall(requestBase, apiKey, headers);
+    }
+    return this.fetchModels(baseUrl, apiKey, headers);
+  },
+
   /**
    * Fetch models from /v1/models endpoint via api-call.
    * Useful when the configured baseUrl is the upstream host root (e.g. https://api.example.com).
@@ -178,6 +225,10 @@ export const modelsApi = {
 
   buildGeminiModelsEndpoint(baseUrl: string) {
     return buildGeminiModelsEndpoint(baseUrl);
+  },
+
+  resolveManagedModelsRequestBase(baseUrl: string, runtimeConfig?: unknown) {
+    return resolveManagedModelsRequestBase(baseUrl, runtimeConfig);
   },
 
   /**

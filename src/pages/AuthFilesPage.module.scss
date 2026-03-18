@@ -79,6 +79,24 @@
   gap: $spacing-xs;
 }
 
+.categoryFilterTagsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.categoryFilterTagsLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.categoryFilterTag {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
 .filterTag {
   display: inline-flex;
   align-items: center;

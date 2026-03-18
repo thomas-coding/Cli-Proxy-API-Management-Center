@@ -188,9 +188,10 @@ export function SystemPage() {
 
     setModelStatus({ type: 'muted', message: t('system_info.models_loading') });
     try {
+      const runtimeConfig = config ?? (await fetchConfig().catch(() => null));
       const apiKeys = await resolveApiKeysForModels();
       const primaryKey = apiKeys[0];
-      const list = await fetchModelsFromStore(auth.apiBase, primaryKey, forceRefresh);
+      const list = await fetchModelsFromStore(auth.apiBase, primaryKey, forceRefresh, runtimeConfig);
       const hasModels = list.length > 0;
       setModelStatus({
         type: hasModels ? 'success' : 'warning',

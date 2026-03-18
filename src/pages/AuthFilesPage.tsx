@@ -347,6 +347,22 @@ export function AuthFilesPage() {
     return counts;
   }, [filesMatchingProblemFilter]);
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<'all' | AuthCategory, number> = {
+      all: filesMatchingProblemFilter.length,
+      team: 0,
+      free: 0,
+      unknown: 0,
+    };
+
+    filesMatchingProblemFilter.forEach((file) => {
+      const category = normalizeAuthCategory(file.auth_category ?? file['auth_category']);
+      counts[category] += 1;
+    });
+
+    return counts;
+  }, [filesMatchingProblemFilter]);
+
   const filtered = useMemo(() => {
     return filesMatchingProblemFilter.filter((item) => {
       const matchType = filter === 'all' || item.type === filter;
@@ -596,6 +612,7 @@ export function AuthFilesPage() {
         return (
           <button
             key={type}
+            type="button"
             className={`${styles.filterTag} ${isActive ? styles.filterTagActive : ''}`}
             style={{
               backgroundColor: isActive ? color.text : color.bg,
@@ -615,6 +632,32 @@ export function AuthFilesPage() {
           </button>
         );
       })}
+    </div>
+  );
+
+  const renderCategoryFilterTags = () => (
+    <div className={styles.categoryFilterTagsWrapper}>
+      <span className={styles.categoryFilterTagsLabel}>{t('auth_files.category_filter_label')}</span>
+      <div className={styles.filterTags}>
+        {categoryOptions.map((option) => {
+          const normalizedValue = option.value === 'all' ? 'all' : normalizeAuthCategory(option.value);
+          const isActive = categoryFilter === normalizedValue;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`${styles.filterTag} ${styles.categoryFilterTag} ${isActive ? styles.filterTagActive : ''}`}
+              onClick={() => {
+                setCategoryFilter(normalizedValue);
+                setPage(1);
+              }}
+            >
+              <span className={styles.filterTagLabel}>{option.label}</span>
+              <span className={styles.filterTagCount}>{categoryCounts[normalizedValue]}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -686,6 +729,7 @@ export function AuthFilesPage() {
 
         <div className={styles.filterSection}>
           {renderFilterTags()}
+          {renderCategoryFilterTags()}
 
           <div className={styles.filterControls}>
             <div className={styles.filterItem}>

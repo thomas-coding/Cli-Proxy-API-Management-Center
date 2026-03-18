@@ -11,6 +11,7 @@ interface ModelsCache {
   data: ModelInfo[];
   timestamp: number;
   apiBase: string;
+  requestBase: string;
 }
 
 interface ModelsState {
@@ -19,9 +20,14 @@ interface ModelsState {
   error: string | null;
   cache: ModelsCache | null;
 
-  fetchModels: (apiBase: string, apiKey?: string, forceRefresh?: boolean) => Promise<ModelInfo[]>;
+  fetchModels: (
+    apiBase: string,
+    apiKey?: string,
+    forceRefresh?: boolean,
+    runtimeConfig?: unknown
+  ) => Promise<ModelInfo[]>;
   clearCache: () => void;
-  isCacheValid: (apiBase: string) => boolean;
+  isCacheValid: (apiBase: string, requestBase?: string) => boolean;
 }
 
 export const useModelsStore = create<ModelsState>((set, get) => ({
@@ -30,11 +36,12 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
   error: null,
   cache: null,
 
-  fetchModels: async (apiBase, apiKey, forceRefresh = false) => {
+  fetchModels: async (apiBase, apiKey, forceRefresh = false, runtimeConfig) => {
     const { cache, isCacheValid } = get();
+    const requestBase = modelsApi.resolveManagedModelsRequestBase(apiBase, runtimeConfig);
 
     // 检查缓存
-    if (!forceRefresh && isCacheValid(apiBase) && cache) {
+    if (!forceRefresh && isCacheValid(apiBase, requestBase) && cache) {
       set({ models: cache.data, error: null });
       return cache.data;
     }
@@ -42,13 +49,13 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const list = await modelsApi.fetchModels(apiBase, apiKey);
+      const list = await modelsApi.fetchManagedModels(apiBase, apiKey, runtimeConfig);
       const now = Date.now();
 
       set({
         models: list,
         loading: false,
-        cache: { data: list, timestamp: now, apiBase }
+        cache: { data: list, timestamp: now, apiBase, requestBase }
       });
 
       return list;
@@ -68,10 +75,11 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     set({ cache: null, models: [] });
   },
 
-  isCacheValid: (apiBase) => {
+  isCacheValid: (apiBase, requestBase = apiBase) => {
     const { cache } = get();
     if (!cache) return false;
     if (cache.apiBase !== apiBase) return false;
+    if (cache.requestBase !== requestBase) return false;
     return Date.now() - cache.timestamp < CACHE_EXPIRY_MS;
   }
 }));
