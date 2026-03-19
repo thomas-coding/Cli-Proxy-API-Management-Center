@@ -6,6 +6,7 @@ import axios from 'axios';
 import { normalizeModelList } from '@/utils/models';
 import { normalizeApiBase } from '@/utils/connection';
 import { apiCallApi, getApiCallErrorMessage } from './apiCall';
+import { apiClient } from './client';
 
 const DEFAULT_CLAUDE_BASE_URL = 'https://api.anthropic.com';
 const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
@@ -80,6 +81,15 @@ const resolveBearerTokenFromAuthorization = (headers: Record<string, string>): s
 };
 
 export const modelsApi = {
+  /**
+   * Fetch available runtime models from the management endpoint.
+   */
+  async fetchAvailableModels() {
+    const response = await apiClient.get<Record<string, unknown>>('/models');
+    const payload = response?.models ?? response?.data ?? response;
+    return normalizeModelList(payload, { dedupe: true });
+  },
+
   /**
    * Fetch available models from /v1/models endpoint (for system info page)
    */

@@ -138,7 +138,7 @@
     "edit_settings": "Изменить настройки",
     "routing_strategy": "Стратегия маршрутизации",
     "available_models": "Доступные модели",
-    "available_models_desc": "Всего моделей от всех провайдеров"
+    "available_models_desc": "Количество моделей в текущем runtime"
   },
   "basic_settings": {
     "title": "Основные настройки",
@@ -1331,9 +1331,9 @@
     "not_loaded": "Не загружено",
     "seconds_ago": "секунд назад",
     "models_title": "Доступные модели",
-    "models_desc": "Показывает ответ /models и автоматически использует сохранённые API-ключи для авторизации.",
+    "models_desc": "Показывает список моделей, зарегистрированных в текущем runtime CLIProxy.",
     "models_loading": "Загрузка доступных моделей...",
-    "models_empty": "Сервис /models не вернул модели",
+    "models_empty": "В текущем runtime сейчас нет доступных моделей",
     "models_error": "Не удалось загрузить список моделей",
     "models_count": "Доступно моделей: {{count}}",
     "version_check_title": "Проверка обновлений",

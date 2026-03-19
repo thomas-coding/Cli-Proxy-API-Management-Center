@@ -138,7 +138,7 @@
     "edit_settings": "Edit Settings",
     "routing_strategy": "Routing Strategy",
     "available_models": "Available Models",
-    "available_models_desc": "Total models from all providers"
+    "available_models_desc": "Current runtime model count"
   },
   "basic_settings": {
     "title": "Basic Settings",
@@ -1326,9 +1326,9 @@
     "not_loaded": "Not Loaded",
     "seconds_ago": "seconds ago",
     "models_title": "Available Models",
-    "models_desc": "Shows the /models response and uses saved API keys for auth automatically.",
+    "models_desc": "Shows the model list currently registered in the CLIProxy runtime.",
     "models_loading": "Loading available models...",
-    "models_empty": "No models returned by /models",
+    "models_empty": "No models are currently available in the runtime",
     "models_error": "Failed to load model list",
     "models_count": "{{count}} available models",
     "version_check_title": "Update Check",

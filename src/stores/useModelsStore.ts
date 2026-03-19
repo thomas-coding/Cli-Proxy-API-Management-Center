@@ -19,7 +19,7 @@ interface ModelsState {
   error: string | null;
   cache: ModelsCache | null;
 
-  fetchModels: (apiBase: string, apiKey?: string, forceRefresh?: boolean) => Promise<ModelInfo[]>;
+  fetchModels: (apiBase: string, forceRefresh?: boolean) => Promise<ModelInfo[]>;
   clearCache: () => void;
   isCacheValid: (apiBase: string) => boolean;
 }
@@ -30,7 +30,7 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
   error: null,
   cache: null,
 
-  fetchModels: async (apiBase, apiKey, forceRefresh = false) => {
+  fetchModels: async (apiBase, forceRefresh = false) => {
     const { cache, isCacheValid } = get();
 
     // 检查缓存
@@ -42,7 +42,7 @@ export const useModelsStore = create<ModelsState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const list = await modelsApi.fetchModels(apiBase, apiKey);
+      const list = await modelsApi.fetchAvailableModels();
       const now = Date.now();
 
       set({

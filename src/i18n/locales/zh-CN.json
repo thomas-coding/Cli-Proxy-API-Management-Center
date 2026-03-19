@@ -138,7 +138,7 @@
     "edit_settings": "编辑设置",
     "routing_strategy": "路由策略",
     "available_models": "可用模型",
-    "available_models_desc": "所有提供商的模型总数"
+    "available_models_desc": "当前运行时可用模型数"
   },
   "basic_settings": {
     "title": "基础设置",
@@ -1326,9 +1326,9 @@
     "not_loaded": "未加载",
     "seconds_ago": "秒前",
     "models_title": "可用模型列表",
-    "models_desc": "展示 /models 返回的模型，并自动使用服务器保存的 API Key 进行鉴权。",
+    "models_desc": "展示 CLIProxy 当前运行时已注册的模型列表。",
     "models_loading": "正在加载可用模型...",
-    "models_empty": "未从 /models 获取到模型数据",
+    "models_empty": "当前运行时没有可用模型",
     "models_error": "获取模型列表失败",
     "models_count": "可用模型 {{count}} 个",
     "version_check_title": "版本检查",
