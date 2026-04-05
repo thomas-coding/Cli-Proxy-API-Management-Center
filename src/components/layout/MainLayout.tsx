@@ -40,6 +40,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   dashboard: <IconSidebarDashboard size={18} />,
   aiProviders: <IconSidebarProviders size={18} />,
   authFiles: <IconSidebarAuthFiles size={18} />,
+  reserveAuthFiles: <IconSidebarAuthFiles size={18} />,
   oauth: <IconSidebarOauth size={18} />,
   quota: <IconSidebarQuota size={18} />,
   usage: <IconSidebarUsage size={18} />,
@@ -423,6 +424,11 @@ export function MainLayout() {
     { path: '/config', label: t('nav.config_management'), icon: sidebarIcons.config },
     { path: '/ai-providers', label: t('nav.ai_providers'), icon: sidebarIcons.aiProviders },
     { path: '/auth-files', label: t('nav.auth_files'), icon: sidebarIcons.authFiles },
+    {
+      path: '/reserve-auth-files',
+      label: t('nav.reserve_auth_files', { defaultValue: '备用号池' }),
+      icon: sidebarIcons.reserveAuthFiles,
+    },
     { path: '/oauth', label: t('nav.oauth', { defaultValue: 'OAuth' }), icon: sidebarIcons.oauth },
     { path: '/quota', label: t('nav.quota_management'), icon: sidebarIcons.quota },
     { path: '/usage', label: t('nav.usage_stats'), icon: sidebarIcons.usage },
@@ -459,6 +465,12 @@ export function MainLayout() {
         if (normalizedPath.startsWith('/auth-files/oauth-model-alias')) return authFilesIndex + 0.2;
         return authFilesIndex + 0.05;
       }
+    }
+
+    const reserveAuthFilesIndex = navOrder.indexOf('/reserve-auth-files');
+    if (reserveAuthFilesIndex !== -1) {
+      if (normalizedPath === '/reserve-auth-files') return reserveAuthFilesIndex;
+      if (normalizedPath.startsWith('/reserve-auth-files/')) return reserveAuthFilesIndex + 0.05;
     }
 
     const exactIndex = navOrder.indexOf(normalizedPath);

@@ -148,7 +148,7 @@ function docHas(doc: YamlDocument, path: YamlPath): boolean {
 function ensureMapInDoc(doc: YamlDocument, path: YamlPath): void {
   const existing = doc.getIn(path, true);
   if (isMap(existing)) return;
-  doc.setIn(path, {});
+  doc.setIn(path, doc.createNode({}));
 }
 
 function deleteIfMapEmpty(doc: YamlDocument, path: YamlPath): void {
@@ -221,6 +221,10 @@ export function getVisualConfigValidationErrors(
     logsMaxTotalSizeMb: getNonNegativeIntegerError(values.logsMaxTotalSizeMb),
     requestRetry: getNonNegativeIntegerError(values.requestRetry),
     maxRetryInterval: getNonNegativeIntegerError(values.maxRetryInterval),
+    'reservePool.productionAvailableThreshold': getNonNegativeIntegerError(
+      values.reservePool.productionAvailableThreshold
+    ),
+    'reservePool.replenishBatchSize': getNonNegativeIntegerError(values.reservePool.replenishBatchSize),
     'streaming.keepaliveSeconds': getNonNegativeIntegerError(values.streaming.keepaliveSeconds),
     'streaming.bootstrapRetries': getNonNegativeIntegerError(values.streaming.bootstrapRetries),
     'streaming.nonstreamKeepaliveInterval': getNonNegativeIntegerError(
@@ -471,6 +475,7 @@ export function useVisualConfig() {
       const routing = asRecord(parsed.routing);
       const payload = asRecord(parsed.payload);
       const streaming = asRecord(parsed.streaming);
+      const reservePool = asRecord(parsed['reserve-pool']);
       const apiKeysStorage = resolveApiKeysStorage(parsed);
 
       const newValues: VisualConfigValues = {
@@ -506,6 +511,15 @@ export function useVisualConfig() {
         requestRetry: String(parsed['request-retry'] ?? ''),
         maxRetryInterval: String(parsed['max-retry-interval'] ?? ''),
         wsAuth: Boolean(parsed['ws-auth']),
+        reservePool: {
+          productionAvailableThreshold: String(
+            reservePool?.['production-available-threshold'] ?? ''
+          ),
+          replenishBatchSize: String(reservePool?.['replenish-batch-size'] ?? ''),
+          validateUsageBeforePromotion: Boolean(
+            reservePool?.['validate-usage-before-promotion']
+          ),
+        },
 
         quotaSwitchProject: Boolean(quotaExceeded?.['switch-project'] ?? true),
         quotaSwitchPreviewModel: Boolean(
@@ -639,6 +653,36 @@ export function useVisualConfig() {
         setIntFromStringInDoc(doc, ['max-retry-interval'], values.maxRetryInterval);
         setBooleanInDoc(doc, ['ws-auth'], values.wsAuth);
 
+        const reserveThreshold =
+          typeof values.reservePool?.productionAvailableThreshold === 'string'
+            ? values.reservePool.productionAvailableThreshold
+            : '';
+        const reserveBatchSize =
+          typeof values.reservePool?.replenishBatchSize === 'string'
+            ? values.reservePool.replenishBatchSize
+            : '';
+        const reserveUsageGate = Boolean(values.reservePool?.validateUsageBeforePromotion);
+        if (
+          docHas(doc, ['reserve-pool']) ||
+          reserveThreshold.trim() ||
+          reserveBatchSize.trim() ||
+          reserveUsageGate
+        ) {
+          ensureMapInDoc(doc, ['reserve-pool']);
+          setIntFromStringInDoc(
+            doc,
+            ['reserve-pool', 'production-available-threshold'],
+            reserveThreshold
+          );
+          setIntFromStringInDoc(doc, ['reserve-pool', 'replenish-batch-size'], reserveBatchSize);
+          setBooleanInDoc(
+            doc,
+            ['reserve-pool', 'validate-usage-before-promotion'],
+            reserveUsageGate
+          );
+          deleteIfMapEmpty(doc, ['reserve-pool']);
+        }
+
         if (
           docHas(doc, ['quota-exceeded']) ||
           !values.quotaSwitchProject ||
@@ -728,6 +772,9 @@ export function useVisualConfig() {
   const setVisualValues = useCallback((newValues: Partial<VisualConfigValues>) => {
     setVisualValuesState((prev) => {
       const next: VisualConfigValues = { ...prev, ...newValues } as VisualConfigValues;
+      if (newValues.reservePool) {
+        next.reservePool = { ...prev.reservePool, ...newValues.reservePool };
+      }
       if (newValues.streaming) {
         next.streaming = { ...prev.streaming, ...newValues.streaming };
       }

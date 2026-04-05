@@ -100,6 +100,14 @@ export function VisualConfigEditor({ values, validationErrors, disabled = false,
   const logsMaxSizeError = getValidationMessage(t, validationErrors?.logsMaxTotalSizeMb);
   const requestRetryError = getValidationMessage(t, validationErrors?.requestRetry);
   const maxRetryIntervalError = getValidationMessage(t, validationErrors?.maxRetryInterval);
+  const reserveThresholdError = getValidationMessage(
+    t,
+    validationErrors?.['reservePool.productionAvailableThreshold']
+  );
+  const reserveBatchSizeError = getValidationMessage(
+    t,
+    validationErrors?.['reservePool.replenishBatchSize']
+  );
   const keepaliveError = getValidationMessage(t, validationErrors?.['streaming.keepaliveSeconds']);
   const bootstrapRetriesError = getValidationMessage(t, validationErrors?.['streaming.bootstrapRetries']);
   const nonstreamKeepaliveError = getValidationMessage(
@@ -227,6 +235,72 @@ export function VisualConfigEditor({ values, validationErrors, disabled = false,
             value={values.apiKeysText}
             disabled={disabled}
             onChange={handleApiKeysTextChange}
+          />
+        </div>
+      </ConfigSection>
+
+      <ConfigSection
+        title={t('config_management.visual.sections.reserve_pool.title', { defaultValue: '备用号池' })}
+        description={t('config_management.visual.sections.reserve_pool.description', {
+          defaultValue: '备用 Codex 号池与真实生产池隔离，按阈值自动补充到生产池。'
+        })}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <SectionGrid>
+            <Input
+              label={t('config_management.visual.sections.reserve_pool.threshold', {
+                defaultValue: '生产池低水位'
+              })}
+              type="number"
+              placeholder="0"
+              value={values.reservePool.productionAvailableThreshold}
+              onChange={(e) =>
+                onChange({
+                  reservePool: {
+                    ...values.reservePool,
+                    productionAvailableThreshold: e.target.value
+                  }
+                })
+              }
+              disabled={disabled}
+              error={reserveThresholdError}
+            />
+            <Input
+              label={t('config_management.visual.sections.reserve_pool.batch_size', {
+                defaultValue: '单轮补号数量'
+              })}
+              type="number"
+              placeholder="0"
+              value={values.reservePool.replenishBatchSize}
+              onChange={(e) =>
+                onChange({
+                  reservePool: {
+                    ...values.reservePool,
+                    replenishBatchSize: e.target.value
+                  }
+                })
+              }
+              disabled={disabled}
+              error={reserveBatchSizeError}
+            />
+          </SectionGrid>
+          <ToggleRow
+            title={t('config_management.visual.sections.reserve_pool.validate_usage', {
+              defaultValue: '补号前做 usage 检测'
+            })}
+            description={t('config_management.visual.sections.reserve_pool.validate_usage_desc', {
+              defaultValue: '开启后，只有 usage 返回 HTTP 200 的备用号才会补充进真实生产池。'
+            })}
+            checked={values.reservePool.validateUsageBeforePromotion}
+            disabled={disabled}
+            onChange={(validateUsageBeforePromotion) =>
+              onChange({
+                reservePool: {
+                  ...values.reservePool,
+                  validateUsageBeforePromotion
+                }
+              })
+            }
           />
         </div>
       </ConfigSection>

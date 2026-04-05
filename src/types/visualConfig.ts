@@ -9,6 +9,8 @@ export type VisualConfigFieldPath =
   | 'logsMaxTotalSizeMb'
   | 'requestRetry'
   | 'maxRetryInterval'
+  | 'reservePool.productionAvailableThreshold'
+  | 'reservePool.replenishBatchSize'
   | 'streaming.keepaliveSeconds'
   | 'streaming.bootstrapRetries'
   | 'streaming.nonstreamKeepaliveInterval';
@@ -50,6 +52,12 @@ export interface StreamingConfig {
   nonstreamKeepaliveInterval: string;
 }
 
+export interface ReservePoolVisualConfig {
+  productionAvailableThreshold: string;
+  replenishBatchSize: string;
+  validateUsageBeforePromotion: boolean;
+}
+
 export type VisualConfigValues = {
   host: string;
   port: string;
@@ -75,6 +83,7 @@ export type VisualConfigValues = {
   quotaSwitchPreviewModel: boolean;
   routingStrategy: 'round-robin' | 'fill-first';
   wsAuth: boolean;
+  reservePool: ReservePoolVisualConfig;
   payloadDefaultRules: PayloadRule[];
   payloadOverrideRules: PayloadRule[];
   payloadFilterRules: PayloadFilterRule[];
@@ -111,6 +120,11 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   quotaSwitchPreviewModel: true,
   routingStrategy: 'round-robin',
   wsAuth: false,
+  reservePool: {
+    productionAvailableThreshold: '',
+    replenishBatchSize: '',
+    validateUsageBeforePromotion: false,
+  },
   payloadDefaultRules: [],
   payloadOverrideRules: [],
   payloadFilterRules: [],
