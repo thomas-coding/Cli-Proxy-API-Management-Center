@@ -20,6 +20,7 @@ import { ReserveAuthFilesPage } from '@/pages/ReserveAuthFilesPage';
 import { UsagePage } from '@/pages/UsagePage';
 import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
+import { OpsReportPage } from '@/pages/OpsReportPage';
 import { SystemPage } from '@/pages/SystemPage';
 
 const mainRoutes = [
@@ -75,6 +76,7 @@ const mainRoutes = [
   { path: '/oauth', element: <OAuthPage /> },
   { path: '/quota', element: <QuotaPage /> },
   { path: '/usage', element: <UsagePage /> },
+  { path: '/ops-report', element: <OpsReportPage /> },
   { path: '/config', element: <ConfigPage /> },
   { path: '/logs', element: <LogsPage /> },
   { path: '/system', element: <SystemPage /> },
