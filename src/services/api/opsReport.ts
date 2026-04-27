@@ -80,6 +80,64 @@ export interface OpsReportReserveOverview {
   };
 }
 
+export interface OpsReportMetricTriple {
+  avg?: number;
+  p95?: number;
+  max?: number;
+}
+
+export interface OpsReportMetricPair {
+  min?: number;
+  p05?: number;
+}
+
+export interface OpsReportShardTopErrorAuth {
+  auth_id?: string;
+  count?: number;
+}
+
+export interface OpsReportShardHostOverview {
+  samples?: number;
+  cpu_host_pct?: OpsReportMetricTriple;
+  mem_available_mb?: OpsReportMetricPair;
+  tcp_established?: {
+    avg?: number;
+    p95?: number;
+    max?: number;
+  };
+  cliproxy_cpu_pct?: {
+    p95?: number;
+    max?: number;
+  };
+}
+
+export interface OpsReportShardCliproxyOverview {
+  phase_counts?: Record<string, number>;
+  first_chunk_upstream_ms?: OpsReportMetricTriple;
+  error_count?: number;
+  top_error_auths?: OpsReportShardTopErrorAuth[];
+}
+
+export interface OpsReportShardInvalidGroup {
+  count?: number;
+  http_status?: number;
+  error_type?: string | null;
+  error_code?: string | null;
+  message?: string | null;
+  accounts?: Array<{
+    name?: string;
+    account?: string;
+    auth_index?: string;
+  }>;
+}
+
+export interface OpsReportShardPoolOverview {
+  ok?: boolean;
+  current_pool_status?: OpsReportCurrentPoolStatus;
+  invalid_error_groups?: OpsReportShardInvalidGroup[];
+  reserve_pool_status?: OpsReportCurrentPoolStatus;
+}
+
 export interface OpsReportServerHealth {
   nginx_access?: {
     total?: number;
@@ -98,6 +156,10 @@ export interface OpsReportServerHealth {
 export interface OpsReportData {
   date?: string;
   generated_at?: string;
+  shard?: string;
+  host?: OpsReportShardHostOverview;
+  cliproxy_perf?: OpsReportShardCliproxyOverview;
+  pool_overview?: OpsReportShardPoolOverview;
   user_overview?: OpsReportUserOverview;
   oauth_overview?: OpsReportOAuthOverview;
   reserve_pool_overview?: OpsReportReserveOverview;
